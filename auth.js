@@ -1,473 +1,458 @@
-// Authentication functionality for Hrec HR System
-(function() {
-  'use strict';
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { body, validationResult } = require('express-validator');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+const { authenticateToken } = require('../middleware/auth');
 
-  // API Configuration
-  const API_BASE = window.location.origin;
-  const API_ENDPOINTS = {
-    login: '/api/auth/login',
-    register: '/api/auth/register',
-    profile: '/api/auth/profile',
-    updateProfile: '/api/auth/profile',
-    logout: '/api/auth/logout'
-  };
+const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'hrec_secret_key_2024_secure';
+const JWT_EXPIRES_IN = '24h';
 
-  // Utility functions
-  const utils = {
-    // Show error message
-    showError: (elementId, message) => {
-      const element = document.getElementById(elementId);
-      if (element) {
-        element.textContent = message;
-        element.style.display = 'block';
-      }
-    },
+const dbPath = path.join(__dirname, '..', 'hrec_users.db');
 
-    // Clear error message
-    clearError: (elementId) => {
-      const element = document.getElementById(elementId);
-      if (element) {
-        element.textContent = '';
-        element.style.display = 'none';
-      }
-    },
+// Validation middleware
+const validateRegistration = [
+  body('email').isEmail().normalizeEmail().withMessage('Please provide a valid email'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
+  body('firstName').trim().isLength({ min: 1 }).withMessage('First name is required'),
+  body('lastName').trim().isLength({ min: 1 }).withMessage('Last name is required'),
+  body('phone').optional().isMobilePhone().withMessage('Please provide a valid phone number'),
+  body('department').optional().trim(),
+  body('position').optional().trim()
+];
 
-    // Show auth message
-    showAuthMessage: (message, type = 'error') => {
-      const messageEl = document.getElementById('authMessage');
-      if (messageEl) {
-        messageEl.textContent = message;
-        messageEl.className = `auth-message ${type}`;
-        messageEl.style.display = 'block';
-        
-        // Auto-hide success messages
-        if (type === 'success') {
-          setTimeout(() => {
-            messageEl.style.display = 'none';
-          }, 5000);
-        }
-      }
-    },
+const validateLogin = [
+  body('email').isEmail().normalizeEmail().withMessage('Please provide a valid email'),
+  body('password').notEmpty().withMessage('Password is required')
+];
 
-    // Clear auth message
-    clearAuthMessage: () => {
-      const messageEl = document.getElementById('authMessage');
-      if (messageEl) {
-        messageEl.style.display = 'none';
-        messageEl.textContent = '';
-      }
-    },
+// Helper function to get database connection
+const getDb = () => {
+  return new sqlite3.Database(dbPath);
+};
 
-    // Set button loading state
-    setButtonLoading: (buttonId, loading) => {
-      const button = document.getElementById(buttonId);
-      if (button) {
-        const text = button.querySelector('.btn-text');
-        const spinner = button.querySelector('.btn-spinner');
-        
-        if (loading) {
-          button.disabled = true;
-          if (text) text.style.opacity = '0';
-          if (spinner) spinner.style.display = 'inline';
-        } else {
-          button.disabled = false;
-          if (text) text.style.opacity = '1';
-          if (spinner) spinner.style.display = 'none';
-        }
-      }
-    },
+// Helper function to generate JWT token
+const generateToken = (userId, email, role, department, position) => {
+  return jwt.sign(
+    { userId, email, role, department, position },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
+};
 
-    // Validate email
-    isValidEmail: (email) => {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      return emailRegex.test(email);
-    },
-
-    // Validate phone number
-    isValidPhone: (phone) => {
-      const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-      return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''));
-    },
-
-    // Check password strength
-    checkPasswordStrength: (password) => {
-      let score = 0;
-      if (password.length >= 8) score++;
-      if (/[a-z]/.test(password)) score++;
-      if (/[A-Z]/.test(password)) score++;
-      if (/[0-9]/.test(password)) score++;
-      if (/[^A-Za-z0-9]/.test(password)) score++;
-      
-      if (score < 3) return 'weak';
-      if (score < 5) return 'medium';
-      return 'strong';
-    },
-
-    // Store token
-    storeToken: (token) => {
-      localStorage.setItem('hrec_token', token);
-    },
-
-    // Get token
-    getToken: () => {
-      return localStorage.getItem('hrec_token');
-    },
-
-    // Remove token
-    removeToken: () => {
-      localStorage.removeItem('hrec_token');
-    },
-
-    // Store user data
-    storeUserData: (userData) => {
-      localStorage.setItem('hrec_user', JSON.stringify(userData));
-    },
-
-    // Get user data
-    getUserData: () => {
-      const userData = localStorage.getItem('hrec_user');
-      return userData ? JSON.parse(userData) : null;
-    },
-
-    // Remove user data
-    removeUserData: () => {
-      localStorage.removeItem('hrec_user');
-    },
-
-    // Make API request
-    apiRequest: async (url, options = {}) => {
-      const token = utils.getToken();
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        },
-        ...options
-      };
-
-      try {
-        const response = await fetch(`${API_BASE}${url}`, config);
-        let data;
-        
-        // Try to parse JSON, handle cases where response might not be JSON
-        try {
-          data = await response.json();
-        } catch (parseError) {
-          // If response is not JSON, create a generic error
-          throw new Error(`Server error: ${response.status} ${response.statusText}`);
-        }
-        
-        if (!response.ok) {
-          const errorMessage = data.message || data.error || `Request failed with status ${response.status}`;
-          throw new Error(errorMessage);
-        }
-        
-        return data;
-      } catch (error) {
-        console.error('API Error:', error);
-        // Re-throw the error so it can be caught by the calling function
-        throw error;
-      }
+// Register new user
+router.post('/register', validateRegistration, async (req, res) => {
+  try {
+    // Check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
     }
-  };
 
-  // Password strength indicator
-  function initPasswordStrength() {
-    const passwordInput = document.getElementById('password');
-    const strengthIndicator = document.getElementById('passwordStrength');
+    const { 
+      email, 
+      password, 
+      firstName, 
+      lastName, 
+      phone, 
+      department = 'General',
+      position = 'Employee'
+    } = req.body;
+
+    // Check if user already exists
+    const db = getDb();
     
-    if (passwordInput && strengthIndicator) {
-      passwordInput.addEventListener('input', (e) => {
-        const password = e.target.value;
-        if (password.length === 0) {
-          strengthIndicator.className = 'password-strength';
-        } else {
-          const strength = utils.checkPasswordStrength(password);
-          strengthIndicator.className = `password-strength ${strength}`;
-        }
-      });
-    }
-  }
-
-  // Password toggle functionality
-  function initPasswordToggles() {
-    const toggles = document.querySelectorAll('.password-toggle');
-    toggles.forEach(toggle => {
-      toggle.addEventListener('click', (e) => {
-        e.preventDefault();
-        // Get the button element (handle case where click might be on content)
-        const button = e.target.closest('.password-toggle') || e.target;
-        // The input is a sibling before the button
-        const input = button.previousElementSibling;
-        if (input && input.type === 'password') {
-          input.type = 'text';
-          button.textContent = '🙈';
-          button.setAttribute('aria-label', 'Hide password');
-        } else if (input && input.type === 'text') {
-          input.type = 'password';
-          button.textContent = '👁️';
-          button.setAttribute('aria-label', 'Show password');
-        }
-      });
-    });
-  }
-
-  // Form validation
-  function validateForm(formData, isRegistration = false) {
-    const errors = {};
-
-    // Email validation
-    if (!formData.email || !utils.isValidEmail(formData.email)) {
-      errors.email = 'Please enter a valid email address';
-    }
-
-    // Password validation
-    if (!formData.password || formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters long';
-    }
-
-    // Registration-specific validation
-    if (isRegistration) {
-      // Name validation
-      if (!formData.firstName || formData.firstName.trim().length < 1) {
-        errors.firstName = 'First name is required';
-      }
-      if (!formData.lastName || formData.lastName.trim().length < 1) {
-        errors.lastName = 'Last name is required';
+    db.get('SELECT id FROM users WHERE email = ?', [email], async (err, row) => {
+      if (err) {
+        console.error('Database error:', err);
+        db.close();
+        return res.status(500).json({
+          success: false,
+          message: 'Database error occurred'
+        });
       }
 
-      // Department validation
-      if (!formData.department || formData.department.trim().length < 1) {
-        errors.department = 'Department is required';
+      if (row) {
+        db.close();
+        return res.status(409).json({
+          success: false,
+          message: 'User with this email already exists'
+        });
       }
-
-      // Position validation
-      if (!formData.position || formData.position.trim().length < 1) {
-        errors.position = 'Position/Job title is required';
-      }
-
-      // Phone validation (optional)
-      if (formData.phone && !utils.isValidPhone(formData.phone)) {
-        errors.phone = 'Please enter a valid phone number';
-      }
-
-      // Confirm password validation
-      if (!formData.confirmPassword || formData.password !== formData.confirmPassword) {
-        errors.confirmPassword = 'Passwords do not match';
-      }
-
-      // Terms agreement validation
-      if (!formData.agreeTerms) {
-        errors.agreeTerms = 'You must agree to the terms and conditions';
-      }
-    }
-
-    return errors;
-  }
-
-  // Display validation errors
-  function displayValidationErrors(errors) {
-    // Clear all previous errors
-    const errorElements = document.querySelectorAll('.error-message');
-    errorElements.forEach(el => {
-      el.textContent = '';
-      el.style.display = 'none';
-    });
-
-    // Display new errors
-    Object.keys(errors).forEach(field => {
-      utils.showError(`${field}Error`, errors[field]);
-    });
-  }
-
-  // Login functionality
-  function initLoginForm() {
-    const form = document.getElementById('loginForm');
-    if (!form) return;
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      utils.clearAuthMessage();
-
-      const formData = {
-        email: form.email.value.trim(),
-        password: form.password.value,
-        rememberMe: form.rememberMe?.checked || false
-      };
-
-      // Validate form
-      const errors = validateForm(formData, false);
-      if (Object.keys(errors).length > 0) {
-        displayValidationErrors(errors);
-        return;
-      }
-
-      // Clear any previous errors
-      const errorElements = document.querySelectorAll('.error-message');
-      errorElements.forEach(el => {
-        el.textContent = '';
-        el.style.display = 'none';
-      });
-
-      utils.setButtonLoading('loginBtn', true);
 
       try {
-        const response = await utils.apiRequest(API_ENDPOINTS.login, {
-          method: 'POST',
-          body: JSON.stringify(formData)
-        });
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-        if (response.success) {
-          utils.storeToken(response.data.token);
-          utils.storeUserData({
-            userId: response.data.userId,
-            email: response.data.email,
-            firstName: response.data.firstName,
-            lastName: response.data.lastName,
-            role: response.data.role,
-            department: response.data.department,
-            position: response.data.position
-          });
-          
-          utils.showAuthMessage('Login successful! Redirecting...', 'success');
-          
-          // Redirect based on user role
-          setTimeout(() => {
-            if (response.data.role === 'admin' || response.data.role === 'hr_manager') {
-              window.location.href = 'hr.html';
-            } else {
-              window.location.href = 'index.html';
+        // Insert new user
+        db.run(
+          'INSERT INTO users (email, password, firstName, lastName, phone, department, position) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [email, hashedPassword, firstName, lastName, phone || null, department, position],
+          function(err) {
+            if (err) {
+              console.error('Error inserting user:', err);
+              db.close();
+              return res.status(500).json({
+                success: false,
+                message: 'Error creating user account'
+              });
             }
-          }, 1500);
-        }
-      } catch (error) {
-        console.error('Login error:', error);
-        utils.showAuthMessage(error.message || 'Login failed. Please try again.');
-      } finally {
-        utils.setButtonLoading('loginBtn', false);
+
+            // Generate token
+            const token = generateToken(this.lastID, email, 'employee', department, position);
+
+            db.close();
+            res.status(201).json({
+              success: true,
+              message: 'User registered successfully',
+              data: {
+                userId: this.lastID,
+                email,
+                firstName,
+                lastName,
+                phone,
+                department,
+                position,
+                role: 'employee',
+                token
+              }
+            });
+          }
+        );
+      } catch (hashError) {
+        console.error('Password hashing error:', hashError);
+        db.close();
+        res.status(500).json({
+          success: false,
+          message: 'Error processing password'
+        });
       }
     });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
   }
+});
 
-  // Registration functionality
-  function initRegisterForm() {
-    const form = document.getElementById('registerForm');
-    if (!form) return;
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      utils.clearAuthMessage();
-
-      const formData = {
-        email: form.email.value.trim(),
-        password: form.password.value,
-        firstName: form.firstName.value.trim(),
-        lastName: form.lastName.value.trim(),
-        phone: form.phone.value.trim(),
-        department: form.department.value,
-        position: form.position.value.trim(),
-        confirmPassword: form.confirmPassword.value,
-        agreeTerms: form.agreeTerms?.checked || false
-      };
-
-      // Validate form
-      const errors = validateForm(formData, true);
-      if (Object.keys(errors).length > 0) {
-        displayValidationErrors(errors);
-        return;
-      }
-
-      // Clear any previous errors
-      const errorElements = document.querySelectorAll('.error-message');
-      errorElements.forEach(el => {
-        el.textContent = '';
-        el.style.display = 'none';
+// Login user
+router.post('/login', validateLogin, async (req, res) => {
+  try {
+    // Check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
       });
+    }
 
-      utils.setButtonLoading('registerBtn', true);
+    const { email, password } = req.body;
 
-      try {
-        const response = await utils.apiRequest(API_ENDPOINTS.register, {
-          method: 'POST',
-          body: JSON.stringify(formData)
-        });
+    const db = getDb();
 
-        if (response.success) {
-          utils.storeToken(response.data.token);
-          utils.storeUserData({
-            userId: response.data.userId,
-            email: response.data.email,
-            firstName: response.data.firstName,
-            lastName: response.data.lastName,
-            role: response.data.role,
-            department: response.data.department,
-            position: response.data.position
+    db.get(
+      'SELECT id, email, password, firstName, lastName, role, department, position, isActive FROM users WHERE email = ?',
+      [email],
+      async (err, user) => {
+        if (err) {
+          console.error('Database error:', err);
+          db.close();
+          return res.status(500).json({
+            success: false,
+            message: 'Database error occurred'
           });
-          
-          utils.showAuthMessage('Registration successful! Redirecting...', 'success');
-          
-          // Redirect to appropriate page
-          setTimeout(() => {
-            window.location.href = 'index.html';
-          }, 1500);
         }
-      } catch (error) {
-        console.error('Registration error:', error);
-        utils.showAuthMessage(error.message || 'Registration failed. Please try again.');
-      } finally {
-        utils.setButtonLoading('registerBtn', false);
+
+        if (!user) {
+          db.close();
+          return res.status(401).json({
+            success: false,
+            message: 'Invalid email or password'
+          });
+        }
+
+        if (!user.isActive) {
+          db.close();
+          return res.status(401).json({
+            success: false,
+            message: 'Account is deactivated'
+          });
+        }
+
+        try {
+          // Verify password
+          const isValidPassword = await bcrypt.compare(password, user.password);
+          
+          if (!isValidPassword) {
+            db.close();
+            return res.status(401).json({
+              success: false,
+              message: 'Invalid email or password'
+            });
+          }
+
+          // Generate token
+          const token = generateToken(user.id, user.email, user.role, user.department, user.position);
+
+          db.close();
+          res.json({
+            success: true,
+            message: 'Login successful',
+            data: {
+              userId: user.id,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              role: user.role,
+              department: user.department,
+              position: user.position,
+              token
+            }
+          });
+        } catch (bcryptError) {
+          console.error('Password verification error:', bcryptError);
+          db.close();
+          res.status(500).json({
+            success: false,
+            message: 'Error verifying password'
+          });
+        }
       }
+    );
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
     });
   }
+});
 
-  // Check authentication status
-  function checkAuthStatus() {
-    const token = utils.getToken();
-    if (token) {
-      // Verify token is still valid
-      utils.apiRequest(API_ENDPOINTS.profile)
-        .then(response => {
-          // Token is valid, user is logged in
-          console.log('User authenticated:', response.data);
-        })
-        .catch(error => {
-          // Token is invalid, remove it
-          console.error('Token verification failed:', error);
-          utils.removeToken();
-          utils.removeUserData();
+// Get user profile
+router.get('/profile', authenticateToken, (req, res) => {
+  const db = getDb();
+
+  db.get(
+    'SELECT id, email, firstName, lastName, phone, birthdate, age, avatar, role, department, position, createdAt FROM users WHERE id = ?',
+    [req.user.userId],
+    (err, user) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({
+          success: false,
+          message: 'Database error occurred'
         });
+      }
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: user
+      });
     }
+  );
+
+  db.close();
+});
+
+// Update user profile
+router.put('/profile', authenticateToken, [
+  body('firstName').optional().trim().isLength({ min: 1 }).withMessage('First name cannot be empty'),
+  body('lastName').optional().trim().isLength({ min: 1 }).withMessage('Last name cannot be empty'),
+  body('phone').optional().isMobilePhone().withMessage('Please provide a valid phone number'),
+  body('birthdate').optional().isISO8601().withMessage('Please provide a valid birthdate'),
+  body('age').optional().isInt({ min: 0, max: 120 }).withMessage('Please provide a valid age')
+], (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { firstName, lastName, phone, birthdate, age } = req.body;
+    const updates = [];
+    const values = [];
+
+    if (firstName) {
+      updates.push('firstName = ?');
+      values.push(firstName);
+    }
+    if (lastName) {
+      updates.push('lastName = ?');
+      values.push(lastName);
+    }
+    if (phone !== undefined) {
+      updates.push('phone = ?');
+      values.push(phone);
+    }
+    if (birthdate) {
+      updates.push('birthdate = ?');
+      values.push(birthdate);
+    }
+    if (age !== undefined) {
+      updates.push('age = ?');
+      values.push(age);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid fields to update'
+      });
+    }
+
+    updates.push('updatedAt = CURRENT_TIMESTAMP');
+    values.push(req.user.userId);
+
+    const db = getDb();
+
+    db.run(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
+      values,
+      function(err) {
+        if (err) {
+          console.error('Database error:', err);
+          return res.status(500).json({
+            success: false,
+            message: 'Error updating profile'
+          });
+        }
+
+        res.json({
+          success: true,
+          message: 'Profile updated successfully'
+        });
+      }
+    );
+
+    db.close();
+  } catch (error) {
+    console.error('Profile update error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
   }
+});
 
-  // Initialize all functionality
-  function init() {
-    console.log('🔐 Initializing Hrec authentication system...');
-    
-    // Initialize password toggles
-    initPasswordToggles();
-    
-    // Initialize password strength indicator
-    initPasswordStrength();
-    
-    // Initialize forms based on current page
-    if (document.getElementById('loginForm')) {
-      initLoginForm();
+// Change password
+router.put('/change-password', authenticateToken, [
+  body('currentPassword').notEmpty().withMessage('Current password is required'),
+  body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters long')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
     }
-    
-    if (document.getElementById('registerForm')) {
-      initRegisterForm();
-    }
-    
-    // Check authentication status
-    checkAuthStatus();
-    
-    console.log('✅ Hrec authentication system initialized');
+
+    const { currentPassword, newPassword } = req.body;
+    const db = getDb();
+
+    db.get(
+      'SELECT password FROM users WHERE id = ?',
+      [req.user.userId],
+      async (err, user) => {
+        if (err) {
+          console.error('Database error:', err);
+          return res.status(500).json({
+            success: false,
+            message: 'Database error occurred'
+          });
+        }
+
+        if (!user) {
+          return res.status(404).json({
+            success: false,
+            message: 'User not found'
+          });
+        }
+
+        try {
+          // Verify current password
+          const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+          
+          if (!isValidPassword) {
+            return res.status(401).json({
+              success: false,
+              message: 'Current password is incorrect'
+            });
+          }
+
+          // Hash new password
+          const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+          // Update password
+          db.run(
+            'UPDATE users SET password = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?',
+            [hashedNewPassword, req.user.userId],
+            function(err) {
+              if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                  success: false,
+                  message: 'Error updating password'
+                });
+              }
+
+              res.json({
+                success: true,
+                message: 'Password changed successfully'
+              });
+            }
+          );
+        } catch (bcryptError) {
+          console.error('Password verification error:', bcryptError);
+          res.status(500).json({
+            success: false,
+            message: 'Error processing password'
+          });
+        }
+      }
+    );
+
+    db.close();
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
   }
+});
 
-  // Initialize when DOM is loaded
-  document.addEventListener('DOMContentLoaded', init);
+// Logout (client-side token removal, but we can track it)
+router.post('/logout', authenticateToken, (req, res) => {
+  // In a more advanced implementation, you might want to blacklist the token
+  // For now, we'll just return success since JWT tokens are stateless
+  res.json({
+    success: true,
+    message: 'Logged out successfully'
+  });
+});
 
-  // Export utils for use in other scripts
-  window.AuthUtils = utils;
-
-})();
+module.exports = router;
