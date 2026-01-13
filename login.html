@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login | Hrec</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="auth-styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand" aria-label="Brand">
+        <a href="index.html" class="brand-link">Hrec<span class="dot">.</span></a>
+      </div>
+      <nav class="main-nav" aria-label="Main">
+        <a href="index.html">Home</a>
+        <a href="register.html">Sign Up</a>
+        <button id="themeSwitch" class="theme-switch" type="button" title="Toggle theme"></button>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="auth-section">
+        <div class="auth-container">
+          <div class="auth-card">
+            <div class="auth-header">
+              <h1>Welcome Back</h1>
+              <p class="muted">Sign in to your Hrec account</p>
+            </div>
+
+            <form id="loginForm" class="auth-form">
+              <div class="form-group">
+                <label for="email">Email Address</label>
+                <input 
+                  type="email" 
+                  id="email" 
+                  name="email" 
+                  placeholder="your.email@company.com" 
+                  required 
+                  autocomplete="email"
+                />
+                <div class="error-message" id="emailError"></div>
+              </div>
+
+              <div class="form-group">
+                <label for="password">Password</label>
+                <div class="password-input">
+                  <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    placeholder="Enter your password" 
+                    required 
+                    autocomplete="current-password"
+                  />
+                  <button type="button" class="password-toggle" id="passwordToggle" aria-label="Toggle password visibility">
+                    👁️
+                  </button>
+                </div>
+                <div class="error-message" id="passwordError"></div>
+              </div>
+
+              <div class="form-options">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="rememberMe" name="rememberMe" />
+                  <span class="checkmark"></span>
+                  Remember me
+                </label>
+                <a href="#" class="forgot-password">Forgot password?</a>
+              </div>
+
+              <button type="submit" class="btn primary full-width" id="loginBtn">
+                <span class="btn-text">Login</span>
+                <span class="btn-spinner" style="display: none;">⏳</span>
+              </button>
+
+              <div class="auth-message" id="authMessage"></div>
+            </form>
+
+            <div class="auth-footer">
+              <p class="muted">Don't have an account? <a href="register.html" class="auth-link">Register here</a></p>
+            </div>
+          </div>
+
+          <div class="auth-info">
+            <h2>Join the Hrec HR System</h2>
+            <p>Access comprehensive HR management tools including recruitment, assessments, and employee management.</p>
+            
+            <div class="features">
+              <div class="feature">
+                <h3>📊 Assessment System</h3>
+                <p>Create and manage quiz assessments for employees and candidates</p>
+              </div>
+              <div class="feature">
+                <h3>👥 Recruitment Management</h3>
+                <p>Streamline your hiring process with integrated recruitment tools</p>
+              </div>
+              <div class="feature">
+                <h3>📈 Employee Analytics</h3>
+                <p>Track performance and engagement with detailed analytics</p>
+              </div>
+              <div class="feature">
+                <h3>🔒 Secure Access</h3>
+                <p>Role-based access control for different HR functions</p>
+              </div>
+            </div>
+
+            <div class="test-accounts">
+              <h3>Test Accounts</h3>
+              <div class="account-list">
+                <div class="account-item">
+                  <strong>Admin:</strong> admin@hrec.com / Admin123!
+                </div>
+                <div class="account-item">
+                  <strong>HR Manager:</strong> hr@hrec.com / HR123!
+                </div>
+                <div class="account-item">
+                  <strong>Employee:</strong> employee@hrec.com / Employee123!
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-content">
+        <div class="footer-brand">Hrec<span class="dot">.</span></div>
+        <div class="footer-meta">© 2025 Hrec HR System. All rights reserved.</div>
+      </div>
+    </footer>
+
+    <script src="theme.js" defer></script>
+    <script src="auth.js" defer></script>
+  </body>
+</html>

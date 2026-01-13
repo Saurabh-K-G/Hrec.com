@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hrec – HR Model</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand" aria-label="Brand"><a href="index.html" class="brand-link">Hrec<span class="dot">.</span></a></div>
+      <nav class="main-nav" aria-label="Main">
+        <a href="index.html">Home</a>
+        <a href="recruitment.html">Recruitment</a>
+        <a href="hr.html" aria-current="page">HR</a>
+        <a href="profile.html">Profile</a>
+        <button id="themeSwitch" class="theme-switch" type="button" title="Toggle theme"></button>
+      </nav>
+    </header>
+
+    <main class="container">
+      <h1 class="page-title">Quiz Assessment System</h1>
+
+      <!-- Mode Toggle -->
+      <section class="mode-toggle">
+        <div class="mode-buttons">
+          <button id="adminModeBtn" class="mode-btn active" data-mode="admin">Admin Panel</button>
+          <button id="assessmentModeBtn" class="mode-btn" data-mode="assessment">Take Assessment</button>
+        </div>
+      </section>
+
+      <!-- Assessment Mode Content -->
+      <section id="assessmentMode" class="mode-content">
+        <div class="assessment-setup">
+          <h2>Assessment Setup</h2>
+          <div class="setup-options">
+            <div class="option-group">
+              <label for="timeLimit">Time Limit (minutes):</label>
+              <select id="timeLimit">
+                <option value="5">5 minutes</option>
+                <option value="10">10 minutes</option>
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="60">60 minutes</option>
+              </select>
+            </div>
+            <div class="option-group">
+              <label for="questionCount">Number of Questions:</label>
+              <select id="questionCount">
+                <option value="all">All Available</option>
+                <option value="5">5 questions</option>
+                <option value="10">10 questions</option>
+                <option value="15">15 questions</option>
+                <option value="20">20 questions</option>
+              </select>
+            </div>
+            <div class="option-group">
+              <label for="difficultyFilter">Category:</label>
+              <select id="difficultyFilter">
+                <option value="all">All Categories</option>
+                <option value="assessment">Assessment</option>
+                <option value="ops">Operations</option>
+                <option value="hr">HR</option>
+              </select>
+            </div>
+          </div>
+          <button id="startAssessment" class="btn primary large">Start Assessment</button>
+        </div>
+
+        <!-- Assessment Progress and Questions -->
+        <section id="assessmentProgress" class="panel hidden">
+          <div class="progress-header">
+            <div class="progress-info">
+              <span id="questionCounter">Question 1 of 10</span>
+              <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+              </div>
+            </div>
+            <div class="timer-section">
+              <span id="timer" class="timer-display">05:00</span>
+              <button id="pauseBtn" class="btn subtle">Pause</button>
+            </div>
+          </div>
+          
+          <div class="question-container">
+            <div id="questionDisplay" class="question-card">
+              <!-- Question content will be inserted here -->
+            </div>
+            
+            <div class="navigation-controls">
+              <button id="prevBtn" class="btn subtle" disabled>Previous</button>
+              <button id="nextBtn" class="btn">Next</button>
+              <button id="submitAssessment" class="btn primary">Submit Assessment</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Results Display -->
+        <section id="resultsDisplay" class="panel hidden">
+          <div class="results-header">
+            <h2>Assessment Results</h2>
+            <div class="score-display">
+              <div class="score-circle">
+                <span id="scorePercentage">0%</span>
+              </div>
+              <div class="score-details">
+                <p id="correctCount">0</p>
+                <p>correct out of</p>
+                <p id="totalCount">0</p>
+                <p>questions</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="results-actions">
+            <button id="reviewAnswers" class="btn">Review Answers</button>
+            <button id="retakeAssessment" class="btn subtle">Take Another Assessment</button>
+          </div>
+          
+          <div id="reviewSection" class="review-section hidden">
+            <h3>Answer Review</h3>
+            <div id="reviewContent"></div>
+          </div>
+        </section>
+      </section>
+
+      <!-- Admin Mode Content -->
+      <section id="adminMode" class="mode-content">
+        <section class="toolbar">
+          <button id="exportBtn" class="btn subtle" type="button">Export Questions</button>
+          <button id="importBtn" class="btn subtle" type="button">Import Questions</button>
+          <input id="importInput" class="sr-only-file" type="file" accept="application/json" />
+          <button id="clearAllBtn" class="btn danger" type="button">Clear All Questions</button>
+        </section>
+
+        <section id="adminPanel" class="panel">
+          <h2>Question Management</h2>
+          <form id="questionForm" class="q-form">
+            <label class="q-row">
+              <span class="label">Category</span>
+              <select id="roundSelect">
+                <option value="assessment">Assessment</option>
+                <option value="ops">Operations</option>
+                <option value="hr">HR</option>
+              </select>
+            </label>
+            <label class="q-row">
+              <span class="label">Question Text</span>
+              <textarea id="questionText" required placeholder="Enter your question here..." rows="3"></textarea>
+            </label>
+
+            <div class="options">
+              <div class="option">
+                <input type="radio" name="correct" value="0" aria-label="Correct option 1" checked />
+                <input type="text" class="opt" placeholder="Option A" required />
+              </div>
+              <div class="option">
+                <input type="radio" name="correct" value="1" aria-label="Correct option 2" />
+                <input type="text" class="opt" placeholder="Option B" required />
+              </div>
+              <div class="option">
+                <input type="radio" name="correct" value="2" aria-label="Correct option 3" />
+                <input type="text" class="opt" placeholder="Option C" required />
+              </div>
+              <div class="option">
+                <input type="radio" name="correct" value="3" aria-label="Correct option 4" />
+                <input type="text" class="opt" placeholder="Option D" required />
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button id="seedBtn" class="btn subtle" type="button">Add Demo Questions</button>
+              <button class="btn primary" type="submit">Save Question</button>
+            </div>
+          </form>
+
+          <div id="questionList" class="question-list"></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="theme.js" defer></script>
+    <script src="hr.js" defer></script>
+  </body>
+  </html>
+
+

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sign Up | Hrec</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="auth-styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand" aria-label="Brand">
+        <a href="index.html" class="brand-link">Hrec<span class="dot">.</span></a>
+      </div>
+      <nav class="main-nav" aria-label="Main">
+        <a href="index.html">Home</a>
+        <a href="login.html">Sign In</a>
+        <button id="themeSwitch" class="theme-switch" type="button" title="Toggle theme"></button>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="auth-section">
+        <div class="auth-container">
+          <div class="auth-card">
+            <div class="auth-header">
+              <h1>Join Hrec</h1>
+              <p class="muted">Create your HR system account</p>
+            </div>
+
+            <form id="registerForm" class="auth-form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="firstName">First Name</label>
+                  <input 
+                    type="text" 
+                    id="firstName" 
+                    name="firstName" 
+                    placeholder="John" 
+                    required 
+                    autocomplete="given-name"
+                  />
+                  <div class="error-message" id="firstNameError"></div>
+                </div>
+
+                <div class="form-group">
+                  <label for="lastName">Last Name</label>
+                  <input 
+                    type="text" 
+                    id="lastName" 
+                    name="lastName" 
+                    placeholder="Doe" 
+                    required 
+                    autocomplete="family-name"
+                  />
+                  <div class="error-message" id="lastNameError"></div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="email">Email Address</label>
+                <input 
+                  type="email" 
+                  id="email" 
+                  name="email" 
+                  placeholder="your.email@company.com" 
+                  required 
+                  autocomplete="email"
+                />
+                <div class="error-message" id="emailError"></div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="phone">Phone Number <span class="optional">(Optional)</span></label>
+                  <input 
+                    type="tel" 
+                    id="phone" 
+                    name="phone" 
+                    placeholder="+1 (555) 123-4567" 
+                    autocomplete="tel"
+                  />
+                  <div class="error-message" id="phoneError"></div>
+                </div>
+
+                <div class="form-group">
+                  <label for="department">Department</label>
+                  <select id="department" name="department" required>
+                    <option value="">Select Department</option>
+                    <option value="Human Resources">Human Resources</option>
+                    <option value="Operations">Operations</option>
+                    <option value="IT">Information Technology</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Sales">Sales</option>
+                    <option value="General">General</option>
+                  </select>
+                  <div class="error-message" id="departmentError"></div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="position">Position/Job Title</label>
+                <input 
+                  type="text" 
+                  id="position" 
+                  name="position" 
+                  placeholder="e.g., HR Manager, Software Developer" 
+                  required 
+                />
+                <div class="error-message" id="positionError"></div>
+              </div>
+
+              <div class="form-group">
+                <label for="password">Password</label>
+                <div class="password-input">
+                  <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    placeholder="Create a strong password" 
+                    required 
+                    autocomplete="new-password"
+                  />
+                  <button type="button" class="password-toggle" id="passwordToggle" aria-label="Toggle password visibility">
+                    👁️
+                  </button>
+                </div>
+                <div class="password-strength" id="passwordStrength"></div>
+                <div class="error-message" id="passwordError"></div>
+              </div>
+
+              <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <div class="password-input">
+                  <input 
+                    type="password" 
+                    id="confirmPassword" 
+                    name="confirmPassword" 
+                    placeholder="Confirm your password" 
+                    required 
+                    autocomplete="new-password"
+                  />
+                  <button type="button" class="password-toggle" id="confirmPasswordToggle" aria-label="Toggle password visibility">
+                    👁️
+                  </button>
+                </div>
+                <div class="error-message" id="confirmPasswordError"></div>
+              </div>
+
+              <div class="form-options">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="agreeTerms" name="agreeTerms" required />
+                  <span class="checkmark"></span>
+                  I agree to the <a href="#" target="_blank">Terms of Service</a> and <a href="#" target="_blank">Privacy Policy</a>
+                </label>
+              </div>
+
+              <button type="submit" class="btn primary full-width" id="registerBtn">
+                <span class="btn-text">Create Account</span>
+                <span class="btn-spinner" style="display: none;">⏳</span>
+              </button>
+
+              <div class="auth-message" id="authMessage" role="alert" aria-live="polite" style="display: none;"></div>
+            </form>
+
+            <div class="auth-footer">
+              <p class="muted">Already have an account? <a href="login.html" class="auth-link">Sign in here</a></p>
+            </div>
+          </div>
+
+          <div class="auth-info">
+            <h2>Why Choose Hrec?</h2>
+            <p>Join thousands of HR professionals using Hrec to streamline their workforce management and improve employee engagement.</p>
+            
+            <div class="features">
+              <div class="feature">
+                <h3>🎯 Smart Assessments</h3>
+                <p>Create customized quizzes and assessments for hiring and employee development</p>
+              </div>
+              <div class="feature">
+                <h3>📋 Recruitment Tools</h3>
+                <p>Manage job postings, track applications, and streamline your hiring process</p>
+              </div>
+              <div class="feature">
+                <h3>📊 Analytics Dashboard</h3>
+                <p>Get insights into employee performance and HR metrics with detailed analytics</p>
+              </div>
+              <div class="feature">
+                <h3>🔐 Role-Based Access</h3>
+                <p>Secure access control with different permission levels for admins, HR managers, and employees</p>
+              </div>
+            </div>
+
+            <div class="benefits">
+              <h3>Key Benefits</h3>
+              <ul class="benefits-list">
+                <li>Centralized employee management</li>
+                <li>Automated assessment scoring</li>
+                <li>Real-time performance tracking</li>
+                <li>Secure data handling</li>
+                <li>Mobile-responsive design</li>
+                <li>24/7 system availability</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-content">
+        <div class="footer-brand">Hrec<span class="dot">.</span></div>
+        <div class="footer-meta">© 2025 Hrec HR System. All rights reserved.</div>
+      </div>
+    </footer>
+
+    <script src="theme.js" defer></script>
+    <script src="auth.js" defer></script>
+  </body>
+</html>
